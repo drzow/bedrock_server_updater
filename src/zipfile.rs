@@ -26,6 +26,7 @@ pub fn main(server_download: PathBuf) -> Result<PathBuf, String> {
 fn unzip_package_file(server_download: &PathBuf) -> TempDir {
     // Create a temporary directory
     let tmp_dir = TempDir::new("bedrock-server").expect("Unable to create temporary directory");
+    println!("Unzipping to {}", tmp_dir.path().as_os_str().to_str().expect("Unable to get str from temp path"));
     // Unzip the contents there
     let orig_file = File::open(server_download).expect("Unable to open downloaded file");
     let mut orig_zip = zip::ZipArchive::new(orig_file).expect("Unable to recognize file as zip archive");
@@ -60,7 +61,7 @@ fn zip_package(server_download: &PathBuf, unzip_directory: &TempDir) -> PathBuf 
     // stripped_path.push(stripped_filename);
     let stripped_path = PathBuf::from(stripped_filename);
     let mut source_dir_pathbuf = PathBuf::new();
-    source_dir_pathbuf.push(unzip_directory);
+    source_dir_pathbuf.push(unzip_directory.path());
     zip_command(&stripped_path, &source_dir_pathbuf);
     stripped_path
 }
@@ -73,7 +74,10 @@ fn zip_command(target_file: &PathBuf, source_directory: &PathBuf) {
     
     // Zip up the directory into the new zip file
     let mut add_to_zip = |file_path: &DirEntry| {
-        zip_writer.start_file(file_path.path().as_os_str().to_str().expect("Unable to get filename to zip"), zip_options).expect("Unable to start adding file to zip");
+        let full_file_path_string = String::from(file_path.path().as_os_str().to_str().expect("Unable to get filename to zip"));
+        let relative_file_path_str_slash = full_file_path_string.strip_prefix(source_directory.to_str().expect("Unable to get path of temp dir as string")).expect("Unable to strip prefix");
+        let relative_file_path_str = relative_file_path_str_slash.strip_prefix("/").expect("Unable to strip slash prefix");
+        zip_writer.start_file(relative_file_path_str, zip_options).expect("Unable to start adding file to zip");
         let mut file_contents = Vec::new();
         let mut source_file = File::open(file_path.path()).expect("Unable to open source file");
         source_file.read_to_end(&mut file_contents).expect("Unable to read contents of file to zip");
