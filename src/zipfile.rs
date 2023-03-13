@@ -2,11 +2,7 @@ extern crate tempdir;
 use regex::Regex;
 use tempdir::TempDir;
 
-use std::io::{Write, Read};
-use std::fs::{self, DirEntry};
-use std::path::Path;
-
-use std::{path::{PathBuf}, fs::File};
+use std::{path::{Path, PathBuf}, fs::{self, DirEntry, File}, io::{Write, Read}};
 
 pub fn main(server_download: PathBuf) -> Result<PathBuf, String> {
 

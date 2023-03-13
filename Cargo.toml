@@ -14,9 +14,12 @@ path="test/testclosure.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+confy = "0.5.1"
 regex = "1.7.0"
 reqwest = { version = "0.11", features = ["blocking", "json"] }
-scraper = "0.14.0"
+serde = { version = "1.0", features = ["derive"] }
+scraper = "0.15.0"
+ssh2 = "0.9.4"
 tempdir = "0.3.7"
 ureq = "2.5.0"
 web_server = "0.4.2"
