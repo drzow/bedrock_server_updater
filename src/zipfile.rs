@@ -2,7 +2,7 @@ extern crate tempdir;
 use regex::Regex;
 use tempdir::TempDir;
 
-use std::{path::{Path, PathBuf}, fs::{self, DirEntry, File}, io::{Write, Read}};
+use std::{path::{Path, PathBuf}, fs::{self, DirEntry, File}, io::{Write, Read}, os::unix::prelude::PermissionsExt};
 
 pub fn main(server_download: PathBuf) -> Result<PathBuf, String> {
 
@@ -55,6 +55,7 @@ fn zip_package(server_download: &PathBuf, unzip_directory: &TempDir) -> PathBuf 
     stripped_filename.push_str("-stripped.zip");
     // let mut stripped_path = PathBuf::from(server_download.parent().expect("Unable to get directory of downloaded file"));
     // stripped_path.push(stripped_filename);
+    println!("Zipping stripped directory into {}", &stripped_filename);
     let stripped_path = PathBuf::from(stripped_filename);
     let mut source_dir_pathbuf = PathBuf::new();
     source_dir_pathbuf.push(unzip_directory.path());
@@ -66,16 +67,18 @@ fn zip_command(target_file: &PathBuf, source_directory: &PathBuf) {
     // Construct new zip path from previous zip path
     let zip_file = File::create(target_file.as_path()).expect("Unable to open zip file");
     let mut zip_writer = zip::ZipWriter::new(zip_file);
-    let zip_options = zip::write::FileOptions::default().compression_level(Some(9));
+    let base_zip_options = zip::write::FileOptions::default().compression_level(Some(9));
     
     // Zip up the directory into the new zip file
     let mut add_to_zip = |file_path: &DirEntry| {
         let full_file_path_string = String::from(file_path.path().as_os_str().to_str().expect("Unable to get filename to zip"));
         let relative_file_path_str_slash = full_file_path_string.strip_prefix(source_directory.to_str().expect("Unable to get path of temp dir as string")).expect("Unable to strip prefix");
         let relative_file_path_str = relative_file_path_str_slash.strip_prefix("/").expect("Unable to strip slash prefix");
-        zip_writer.start_file(relative_file_path_str, zip_options).expect("Unable to start adding file to zip");
         let mut file_contents = Vec::new();
         let mut source_file = File::open(file_path.path()).expect("Unable to open source file");
+        let mode = source_file.metadata().unwrap().permissions().mode();
+        let zip_options = base_zip_options.unix_permissions(mode);
+        zip_writer.start_file(relative_file_path_str, zip_options).expect("Unable to start adding file to zip");
         source_file.read_to_end(&mut file_contents).expect("Unable to read contents of file to zip");
         zip_writer.write_all(&file_contents).expect("Unable to write file contents in zip");
         file_contents.clear();
