@@ -1,10 +1,13 @@
+use cloudflare_workers::kvstore;
 use confy;
-use reqwest::{blocking::Client};
+use reqwest::blocking::Client;
 use serde::{Serialize, Deserialize};
 use serde_json::json;
 use std::{net::TcpStream, io::{Write, Read}, path::PathBuf, fs::File};
-use ssh2::{Session};
+use ssh2::Session;
 use std::path::Path;
+
+use webprocessing;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct MyConfig {
@@ -36,6 +39,10 @@ pub fn main(stripped_zipfile: PathBuf) -> Result<(), String> {
 
     // Start HeavyNode server
     start_server(&myconfig);
+
+    // Save version to KV store
+    save_version(&myconfig, &stripped_zipfile);
+
 
     // Profit
     Ok(())
@@ -119,3 +126,9 @@ fn unzip_on_server(myconfig: &MyConfig, zip_file: &PathBuf) {
 fn start_server(myconfig: &MyConfig) {
     power_server(myconfig, String::from("start"));
 } 
+
+fn save_version(myconfig: &MyConfig, zip_file: &PathBuf) {
+    // Get version number from path
+    let path_str: String = String::from(zip_file.as_os_str());
+    let version: String = webprocessing::get_version_from_string(path_str);
+}

@@ -3,8 +3,8 @@ use regex::Regex;
 extern crate scraper;
 use scraper::{Html, Selector};
 extern crate ureq;
-use ureq::{Agent};
-use std::{fs::{self}, process::exit, path::{PathBuf}};
+use ureq::Agent;
+use std::{fs::{self}, process::exit, path::PathBuf};
 
 const SERVER_URL: &'static str = "https://www.minecraft.net/en-us/download/server/bedrock";
 
@@ -47,8 +47,12 @@ fn get_download_link(server_page: Html) -> String {
 }
 
 fn get_server_version(download_link: &String) -> String {
-    let version_regex = Regex::new(r"bedrock-server-(\d+\.\d+\.\d+)\.").unwrap();
-    let version_cap = version_regex.captures(&download_link).unwrap();
+    get_version_from_string(download_link)
+}
+
+fn get_version_from_string(link_or_path: &String) -> String {
+    let version_regex = Regex::new(r"bedrock-server-(\d+\.\d+\.\d+)[\.-]").unwrap();
+    let version_cap = version_regex.captures(&link_or_path).unwrap();
     version_cap.get(1).unwrap().as_str().to_string()
 }
 
