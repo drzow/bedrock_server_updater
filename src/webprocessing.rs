@@ -1,56 +1,29 @@
 extern crate regex;
 use regex::Regex;
 extern crate scraper;
-use scraper::{Html, Selector};
 extern crate ureq;
-use ureq::Agent;
 use std::{fs::{self}, process::exit, path::PathBuf};
 
-const SERVER_URL: &'static str = "https://www.minecraft.net/en-us/download/server/bedrock";
+pub fn main(version_path: &str, download_url: &str) -> Result<PathBuf, String> {
+    // Get the server version from the provided URL
+    let server_version = get_server_version(&download_url.to_string());
 
-pub fn main(version_path: &str) -> Result<PathBuf, String> {
-    // Check Bedrock Server Page
-    let http_agent = get_agent();
-    let server_page = check_bedrock_server_page(http_agent, SERVER_URL);
-
-    // Find current Bedrock Server version
-    let download_link = get_download_link(server_page);
-    let server_version = get_server_version(&download_link);
-
-    // If it is equal to or less than the latest one we have, exit
+    // Check current version
     let current_version = get_current_version(version_path);
-    let new_version = is_newer_version(&current_version, &server_version);
-    if ! new_version {
+    if !is_newer_version(&current_version, &server_version) {
         println!("Server version {} is unchanged.", server_version);
         exit(0);
     }
 
-    let path_out = download_server_package(download_link, server_version);
+    let path_out = download_server_package(download_url.to_string(), server_version);
     Ok(path_out)
-}
-
-fn get_agent() -> Agent {
-    ureq::AgentBuilder::new().build()
-}
-
-fn check_bedrock_server_page(http_agent: Agent, path: &str) -> Html {
-    let body: String = http_agent.get(path)
-      .call().unwrap()
-      .into_string().unwrap();
-    Html::parse_document(&body)
-}
-
-fn get_download_link(server_page: Html) -> String {
-    let selector = Selector::parse(r#"a[aria-label="Download Minecraft Dedicated Server software for Ubuntu (Linux)"]"#).unwrap();
-    let download_link = server_page.select(&selector).next().unwrap().value().attr("href").unwrap();
-    download_link.to_string()
 }
 
 fn get_server_version(download_link: &String) -> String {
     get_version_from_string(download_link)
 }
 
-fn get_version_from_string(link_or_path: &String) -> String {
+pub fn get_version_from_string(link_or_path: &String) -> String {
     let version_regex = Regex::new(r"bedrock-server-(\d+\.\d+\.\d+)[\.-]").unwrap();
     let version_cap = version_regex.captures(&link_or_path).unwrap();
     version_cap.get(1).unwrap().as_str().to_string()

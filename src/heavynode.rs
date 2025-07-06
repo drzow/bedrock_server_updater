@@ -1,13 +1,14 @@
-use cloudflare_workers::kvstore;
+//use cloudflare_workers::kvstore;
 use confy;
 use reqwest::blocking::Client;
 use serde::{Serialize, Deserialize};
 use serde_json::json;
 use std::{net::TcpStream, io::{Write, Read}, path::PathBuf, fs::File};
 use ssh2::Session;
+use std::fs;
 use std::path::Path;
 
-use webprocessing;
+use crate::webprocessing;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct MyConfig {
@@ -23,7 +24,7 @@ impl ::std::default::Default for MyConfig {
     fn default() -> Self { Self { server_name: "Server.fqdn".into(), server_port: 1234, username: "User".into(), password: "pw".into(), api_key: "key".into(), base_url: "url".into() } }
 }
 
-pub fn main(stripped_zipfile: PathBuf) -> Result<(), String> {
+pub fn main(stripped_zipfile: PathBuf, version_path: &str) -> Result<(), String> {
     // Load configuration
     let myconfig: MyConfig = confy::load("bedrock_server_updater", None).expect("Error loading configuration");
     //confy::store("bedrock_server_updater", None, cfg);
@@ -41,8 +42,9 @@ pub fn main(stripped_zipfile: PathBuf) -> Result<(), String> {
     start_server(&myconfig);
 
     // Save version to KV store
-    save_version(&myconfig, &stripped_zipfile);
-
+    if let Err(errmsg) = save_version(&myconfig, &stripped_zipfile, version_path) {
+        eprintln!("❌ Failed to save version: {}", errmsg);
+    }
 
     // Profit
     Ok(())
@@ -127,8 +129,20 @@ fn start_server(myconfig: &MyConfig) {
     power_server(myconfig, String::from("start"));
 } 
 
-fn save_version(myconfig: &MyConfig, zip_file: &PathBuf) {
-    // Get version number from path
-    let path_str: String = String::from(zip_file.as_os_str());
-    let version: String = webprocessing::get_version_from_string(path_str);
+fn save_version(_myconfig: &MyConfig, zip_file: &PathBuf, version_path: &str) -> Result<(), String> {
+    // Convert the PathBuf into a UTF-8 String
+    let path_str: String = zip_file
+        .to_str()
+        .ok_or("Path is not valid UTF-8")?
+        .to_string();
+
+    // Get the version string from the filename
+    let version = webprocessing::get_version_from_string(&path_str);
+
+    // Write the version string to the VERSION_PATH file
+    fs::write(version_path, version.clone())
+        .map_err(|e| format!("Failed to write version file: {}", e))?;
+
+    println!("✔ Version {} saved to '{}'", version, version_path);
+    Ok(())
 }

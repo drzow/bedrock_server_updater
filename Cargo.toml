@@ -14,7 +14,7 @@ path="test/testclosure.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-cloudflare-workers = "0.11.0"
+base64ct = "=1.6.0"  # Compatible with Rust 2021
 confy = "0.5.1"
 regex = "1.7.0"
 reqwest = { version = "0.11", features = ["blocking", "json"] }
